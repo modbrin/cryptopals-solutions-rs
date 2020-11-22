@@ -1,4 +1,4 @@
-/// Task: Convert hex string to base64 string
+/// Task: base64 encoding/decoding implementation
 
 const BASE64_CHARS: [char; 64] = [
     'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S',
