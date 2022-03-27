@@ -35,14 +35,14 @@ lazy_static! {
             ('z', 0.0007836),
             (' ', 0.1918182),
         ]
-        .iter()
-        .cloned()
+        .into_iter()
         .collect()
     };
 }
 
-pub fn rate_english_frequency(guess: &[char]) -> f32 {
+pub fn rate_english_frequency<T: AsRef<[char]>>(guess: T) -> f32 {
     guess
+        .as_ref()
         .iter()
         .map(|ch| ENGLISH_FREQUENCIES.get(ch).unwrap_or(&0.0))
         .sum()
