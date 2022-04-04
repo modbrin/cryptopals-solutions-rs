@@ -1,5 +1,4 @@
-// Task: Break repeating-key XOR
-// use crate::task_4;
+/// Task: Break repeating-key XOR
 use crate::task_3::{brute_single_byte_xor, rate_english_frequency};
 use crate::task_5::repeating_key_xor;
 
@@ -95,7 +94,7 @@ pub fn brute_repeating_key_xor<T: AsRef<[u8]>>(cipher: T) -> Option<Vec<u8>> {
         for chunk in split_into_transposed_chunks(&cipher, ks as usize).iter() {
             guess_key.push(brute_single_byte_xor(chunk).map(|(k, ..)| k)?)
         }
-        let guess = repeating_key_xor(&cipher_ref, &guess_key.as_ref());
+        let guess = repeating_key_xor(cipher_ref, guess_key.as_ref());
         let rate = rate_english_frequency(&guess);
         if rate > max_rate {
             max_rate = rate;
@@ -107,9 +106,8 @@ pub fn brute_repeating_key_xor<T: AsRef<[u8]>>(cipher: T) -> Option<Vec<u8>> {
 
 #[cfg(test)]
 mod tests {
-    use crate::task_1::base64_to_bytes;
-
     use super::*;
+    use crate::task_1::base64_to_bytes;
     use std::fs::File;
     use std::io::{BufRead, BufReader};
 
@@ -138,10 +136,7 @@ mod tests {
             vec![vec![1, 2, 3]]
         );
 
-        // assert_eq!(find_keysizes(&[1u8, 2, 3, 4, 5, 6], None, None, None), Some(vec![1u8, 2, 3]));
-
-        let file = File::open("/home/modbrin/projects/cryptopals-solutions-rs/set_1/res/task6.txt")
-            .expect("Failed to open file.");
+        let file = File::open("res/task6.txt").expect("Failed to open file.");
         let mut file_content = String::new();
         BufReader::new(file)
             .lines()

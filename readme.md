@@ -1,1 +1,1 @@
-My solutions to cryptographics challenges from [cryptopals.com](https://cryptopals.com) 
+My solutions to cryptographic challenges from [cryptopals.com](https://cryptopals.com) 
