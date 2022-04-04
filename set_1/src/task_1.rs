@@ -4,13 +4,11 @@ use lazy_static::lazy_static;
 use num::traits::One;
 use std::fmt::Display;
 
-// TASK 1 ##############################################################################
-
 #[derive(Debug, Clone)]
 pub enum Base64Error {
-    /// Provided base64 input is invalid, i.e. it contains chars outside base64 range.
+    /// Provided base64 input is invalid, i.e. it contains chars outside of base64 range.
     ParsingFailed,
-    /// Input base64 string is malformed, i.e. size is not multiple of 4.
+    /// Input base64 string is malformed, i.e. size is not a multiple of 4.
     AlignmentMismatch,
 }
 
@@ -74,22 +72,18 @@ pub fn bytes_to_base64<T: AsRef<[u8]>>(input_data: T) -> String {
         let it_0 = it.next();
         let it_1 = it.next();
         let it_2 = it.next();
-
         if it_0.is_none() {
             break;
         }
-
-        let comp_0 = it_0.map(|ok| *ok >> 2);
-        let comp_1 = it_0.map(|ok| 0x3f & *ok << 4 | it_1.map(|v| *v >> 4).unwrap_or(0));
-        let comp_2 = it_1.map(|ok| 0x3f & *ok << 2 | it_2.map(|v| *v >> 6).unwrap_or(0));
-        let comp_3 = it_2.map(|ok| 0x3f & *ok);
-
+        let comp_0 = it_0.map(|ok| ok >> 2);
+        let comp_1 = it_0.map(|ok| 0x3f & ok << 4 | it_1.map(|v| v >> 4).unwrap_or(0));
+        let comp_2 = it_1.map(|ok| 0x3f & ok << 2 | it_2.map(|v| v >> 6).unwrap_or(0));
+        let comp_3 = it_2.map(|ok| 0x3f & ok);
         result.extend(
             vec![comp_0, comp_1, comp_2, comp_3]
                 .into_iter()
                 .map(|comp| comp.map(|idx| BASE64_CHARS[idx as usize]).unwrap_or('=')),
         );
-
         if it_2.is_none() {
             break;
         }
@@ -100,13 +94,8 @@ pub fn bytes_to_base64<T: AsRef<[u8]>>(input_data: T) -> String {
 pub fn base64_to_bytes(input_base64: &str) -> Result<Vec<u8>, Base64Error> {
     let mut it = input_base64.chars();
     let mut result = Vec::new();
-    // result.reserve(next_multiple(src_ref.len(), 3));
-    loop {
-        let it_0 = if let Some(it_in) = it.next() {
-            Some(base64_to_index(it_in)?)
-        } else {
-            break;
-        };
+    while let Some(it_in) = it.next() {
+        let it_0 = Some(base64_to_index(it_in)?);
         macro_rules! proc_it {
             ($($i: ident), *) => {
                 $(
@@ -120,7 +109,6 @@ pub fn base64_to_bytes(input_base64: &str) -> Result<Vec<u8>, Base64Error> {
             }
         }
         proc_it!(it_1, it_2, it_3);
-
         let comp_0 = it_0.map(|ok| ok << 2 | it_1.map(|v| v >> 4).unwrap_or(0));
         let mut comp_1 = it_1.map(|ok| ok << 4 | it_2.map(|v| v >> 2).unwrap_or(0));
         let mut comp_2 = it_2.map(|ok| ok << 6 | it_3.unwrap_or(0));
@@ -134,7 +122,6 @@ pub fn base64_to_bytes(input_base64: &str) -> Result<Vec<u8>, Base64Error> {
                 comp_2 = None
             }
         };
-
         macro_rules! proc_comp {
             ($($i: ident),*) => {
                 $(

@@ -40,25 +40,30 @@ lazy_static! {
     };
 }
 
-pub fn rate_english_frequency<T: AsRef<[char]>>(guess: T) -> f32 {
+pub fn rate_english_frequency<T: AsRef<[u8]>>(guess: T) -> f32 {
     guess
         .as_ref()
         .iter()
-        .map(|ch| ENGLISH_FREQUENCIES.get(ch).unwrap_or(&0.0))
+        .map(|ch| ENGLISH_FREQUENCIES.get(&(*ch as char)).unwrap_or(&0.0))
         .sum()
 }
 
-pub fn brute_single_byte_xor(hex: &str) -> Result<(u8, String, f32), String> {
-    let bytes = hex::decode(hex).map_err(|_| "Decoding from hex failed.")?;
-    (0u8..255)
-        .map(|ch| {
-            let guess: Vec<char> = bytes.iter().map(|_ch| (_ch ^ ch) as char).collect();
+// ONLY WORKS FOR ASCII INPUT
+pub fn brute_single_byte_xor<T: AsRef<[u8]>>(data: T) -> Option<(u8, Vec<u8>, f32)> {
+    (0u8..=255)
+        .map(|k| {
+            let guess: Vec<u8> = data.as_ref().iter().map(|b| b ^ k).collect();
             let rating = rate_english_frequency(&guess);
-            (guess, ch, rating)
+            (guess, k, rating)
         })
         .max_by(|a, b| a.2.partial_cmp(&b.2).unwrap_or(Ordering::Equal))
-        .ok_or_else(|| "Can't find best candidate".to_owned())
-        .map(|(vec, key, rating)| (key, vec.iter().collect(), rating))
+        .map(|(vec, key, rating)| (key, vec.into_iter().collect(), rating))
+}
+
+pub fn brute_single_byte_xor_str(hex: &str) -> Option<(u8, String, f32)> {
+    let bytes = hex::decode(hex).ok()?;
+    brute_single_byte_xor(&bytes)
+        .map(|(key, guess, rating)| (key, guess.into_iter().map(|b| b as char).collect(), rating))
 }
 
 #[cfg(test)]
@@ -68,10 +73,10 @@ mod tests {
     #[test]
     fn break_single_byte_xor_should_pass() {
         assert_eq!(
-            brute_single_byte_xor(
+            brute_single_byte_xor_str(
                 "1b37373331363f78151b7f2b783431333d78397828372d363c78373e783a393b3736"
             ),
-            Ok((
+            Some((
                 88u8,
                 "Cooking MC\'s like a pound of bacon".to_owned(),
                 2.2462904

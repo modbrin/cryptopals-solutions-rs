@@ -1,5 +1,5 @@
 /// Task: Find single-byte XOR
-use crate::prelude::brute_single_byte_xor;
+use crate::prelude::brute_single_byte_xor_str;
 use std::cmp::Ordering;
 use std::fs::File;
 use std::io::{self, BufRead};
@@ -20,7 +20,7 @@ where
     let lines = read_lines(path).map_err(|_| "Failed to read file".to_owned())?;
     lines
         .filter_map(|lr| lr.ok())
-        .filter_map(|line| brute_single_byte_xor(&line).ok())
+        .filter_map(|line| brute_single_byte_xor_str(&line))
         .max_by(|a, b| a.2.partial_cmp(&b.2).unwrap_or(Ordering::Equal))
         .ok_or_else(|| "Can't find best candidate".to_owned())
 }
