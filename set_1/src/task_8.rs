@@ -26,7 +26,6 @@ mod tests {
     #[test]
     fn decipher_aes_ecb_should_pass() {
         let file = File::open("res/task8.txt").expect("Failed to open file.");
-        // let mut file_content = String::new();
 
         let mut likely_ecb_cipher = String::new();
         let mut max_repeats: u32 = 0;

@@ -5,3 +5,9 @@ authors = ["Maksim Surkov <modbrin@gmail.com>"]
 edition = "2021"
 
 [dependencies]
+set_1 = {path = "../set_1"}
+hex = "0.4.3"
+lazy_static = "1.4.0"
+num = "0.4.0"
+openssl-sys = "0.9"
+openssl = "0.10"
