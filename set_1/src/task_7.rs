@@ -1,19 +1,76 @@
-/// Task: Decipher AES in ECB mode
 use openssl::symm::{Cipher, Crypter, Mode};
+/// Task: Decipher AES in ECB mode
+use std::iter::FromIterator;
+
+pub const AES_BLOCK_SIZE: usize = 16;
+
+pub fn aes_decipher_single_block<T: AsRef<[u8]>>(cipher: T, key: T, iv: Option<&[u8]>) -> Vec<u8> {
+    let cipher_ref = cipher.as_ref();
+    let key_ref = key.as_ref();
+    assert_eq!(
+        cipher_ref.len(),
+        AES_BLOCK_SIZE,
+        "Input must be of block size"
+    );
+    assert_eq!(key_ref.len(), AES_BLOCK_SIZE, "Key must be of block size");
+    if let Some(iv_ref) = iv {
+        assert_eq!(iv_ref.len(), AES_BLOCK_SIZE, "IV must be of block size");
+    }
+
+    let mut output = vec![0u8; AES_BLOCK_SIZE * 2];
+    let mut crypter = Crypter::new(Cipher::aes_128_ecb(), Mode::Decrypt, key_ref, iv)
+        .expect("failed to construct crypter");
+    crypter.pad(false);
+    let _count = crypter
+        .update(cipher_ref, output.as_mut())
+        .expect("crypter update action failed");
+    output.truncate(AES_BLOCK_SIZE);
+    output
+}
+
+pub struct RepeatingKey(Vec<u8>, usize);
+
+impl RepeatingKey {
+    pub fn new<T: AsRef<[u8]>>(key: T) -> Self {
+        Self(Vec::from_iter(key.as_ref().iter().copied()), 0)
+    }
+
+    pub fn take(&mut self, count: usize) -> Option<Vec<u8>> {
+        if self.0.len() > 0 {
+            let mut res = Vec::new();
+            let mut index = 0;
+            while res.len() < count {
+                res.push(self.0[index]);
+                index = (index + 1) % self.0.len();
+            }
+            Some(res)
+        } else {
+            None
+        }
+    }
+}
 
 pub fn decipher_aes_ecb<T: AsRef<[u8]>>(cipher: T, key: T) -> Vec<u8> {
     let cipher_ref = cipher.as_ref();
     let key_ref = key.as_ref();
-    let mut output = vec![0u8; cipher_ref.len() + Cipher::aes_128_ecb().block_size()];
-    let mut crypter = Crypter::new(Cipher::aes_128_ecb(), Mode::Decrypt, key_ref, None)
-        .expect("failed to construct crypter");
-    let count = crypter
-        .update(cipher_ref, output.as_mut())
-        .expect("crypter update action failed");
-    let rest = crypter
-        .finalize(&mut output[count..])
-        .expect("crypter finalize action failed");
-    output.truncate(count + rest);
+    assert_eq!(cipher_ref.len() % AES_BLOCK_SIZE, 0);
+    assert!(key_ref.len() > 0);
+    let full_blocks = cipher_ref.len() / AES_BLOCK_SIZE;
+    let mut rep_key = RepeatingKey::new(key_ref);
+    let mut output = Vec::new();
+    for i in 0..full_blocks {
+        let block_ref = &cipher_ref[i * AES_BLOCK_SIZE..(i + 1) * AES_BLOCK_SIZE];
+        let key_part = rep_key.take(AES_BLOCK_SIZE).unwrap();
+        let res_block = aes_decipher_single_block(block_ref, key_part.as_slice(), None);
+        output.extend(res_block.into_iter());
+    }
+    let last = *output.last().unwrap();
+    let ending = if last == 0 {
+        AES_BLOCK_SIZE
+    } else {
+        last as usize
+    };
+    output.truncate(output.len() - ending);
     output
 }
 

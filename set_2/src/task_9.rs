@@ -1,12 +1,17 @@
-/// Task: Implement padding
+/// Task: Implement pkcs#7 padding
 
-pub fn pad_to_size<T: AsRef<[u8]>>(input: T, size: usize) -> Vec<u8> {
+pub fn pad_to_block_size<T: AsRef<[u8]>>(input: T, block_size: usize) -> Vec<u8> {
     let input_ref = input.as_ref();
-    let pad_size = (size - (input_ref.len() % size)) % size;
+    let pad_size = block_size - input_ref.len() % block_size;
+    let pad_byte = if pad_size == block_size {
+        0u8
+    } else {
+        pad_size as u8
+    };
     input_ref
         .iter()
         .cloned()
-        .chain((0..pad_size).map(|_| b'\x04'))
+        .chain((0..pad_size).map(|_| pad_byte))
         .collect()
 }
 
@@ -17,13 +22,14 @@ mod tests {
     #[test]
     fn decipher_aes_ecb_should_pass() {
         assert_eq!(
-            pad_to_size(b"YELLOW SUBMARINE", 20),
+            pad_to_block_size(b"YELLOW SUBMARINE", 20),
             b"YELLOW SUBMARINE\x04\x04\x04\x04"
         );
-        assert_eq!(pad_to_size(b"12345", 3), b"12345\x04");
-        assert_eq!(pad_to_size(b"12", 2), b"12");
-        assert_eq!(pad_to_size(b"12345678", 2), b"12345678");
-        assert_eq!(pad_to_size(b"1234567", 5), b"1234567\x04\x04\x04");
-        assert_eq!(pad_to_size(b"", 3), b"");
+        assert_eq!(pad_to_block_size(b"12345", 3), b"12345\x01");
+        assert_eq!(pad_to_block_size(b"12", 2), b"12\x00\x00");
+        assert_eq!(pad_to_block_size(b"12345678", 2), b"12345678\x00\x00");
+        assert_eq!(pad_to_block_size(b"1234567", 5), b"1234567\x03\x03\x03");
+        assert_eq!(pad_to_block_size(b"123456", 5), b"123456\x04\x04\x04\x04");
+        assert_eq!(pad_to_block_size(b"", 3), b"\x00\x00\x00");
     }
 }
