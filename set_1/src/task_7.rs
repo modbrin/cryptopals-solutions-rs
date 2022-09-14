@@ -1,10 +1,10 @@
-use openssl::symm::{Cipher, Crypter, Mode};
 /// Task: Decipher AES in ECB mode
+use openssl::symm::{Cipher, Crypter, Mode};
 use std::iter::FromIterator;
 
 pub const AES_BLOCK_SIZE: usize = 16;
 
-pub fn aes_decipher_single_block<T: AsRef<[u8]>>(cipher: T, key: T, iv: Option<&[u8]>) -> Vec<u8> {
+pub fn aes_decrypt_single_block<T: AsRef<[u8]>>(cipher: T, key: T) -> Vec<u8> {
     let cipher_ref = cipher.as_ref();
     let key_ref = key.as_ref();
     assert_eq!(
@@ -13,12 +13,9 @@ pub fn aes_decipher_single_block<T: AsRef<[u8]>>(cipher: T, key: T, iv: Option<&
         "Input must be of block size"
     );
     assert_eq!(key_ref.len(), AES_BLOCK_SIZE, "Key must be of block size");
-    if let Some(iv_ref) = iv {
-        assert_eq!(iv_ref.len(), AES_BLOCK_SIZE, "IV must be of block size");
-    }
 
     let mut output = vec![0u8; AES_BLOCK_SIZE * 2];
-    let mut crypter = Crypter::new(Cipher::aes_128_ecb(), Mode::Decrypt, key_ref, iv)
+    let mut crypter = Crypter::new(Cipher::aes_128_ecb(), Mode::Decrypt, key_ref, None)
         .expect("failed to construct crypter");
     crypter.pad(false);
     let _count = crypter
@@ -50,7 +47,7 @@ impl RepeatingKey {
     }
 }
 
-pub fn decipher_aes_ecb<T: AsRef<[u8]>>(cipher: T, key: T) -> Vec<u8> {
+pub fn decrypt_aes_ecb<T: AsRef<[u8]>>(cipher: T, key: T) -> Vec<u8> {
     let cipher_ref = cipher.as_ref();
     let key_ref = key.as_ref();
     assert_eq!(cipher_ref.len() % AES_BLOCK_SIZE, 0);
@@ -61,16 +58,11 @@ pub fn decipher_aes_ecb<T: AsRef<[u8]>>(cipher: T, key: T) -> Vec<u8> {
     for i in 0..full_blocks {
         let block_ref = &cipher_ref[i * AES_BLOCK_SIZE..(i + 1) * AES_BLOCK_SIZE];
         let key_part = rep_key.take(AES_BLOCK_SIZE).unwrap();
-        let res_block = aes_decipher_single_block(block_ref, key_part.as_slice(), None);
+        let res_block = aes_decrypt_single_block(block_ref, key_part.as_slice());
         output.extend(res_block.into_iter());
     }
-    let last = *output.last().unwrap();
-    let ending = if last == 0 {
-        AES_BLOCK_SIZE
-    } else {
-        last as usize
-    };
-    output.truncate(output.len() - ending);
+    let last = *output.last().unwrap() as usize;
+    output.truncate(output.len() - last);
     output
 }
 
@@ -82,7 +74,7 @@ mod tests {
     use std::io::{BufRead, BufReader};
 
     #[test]
-    fn decipher_aes_ecb_should_pass() {
+    fn decrypt_aes_ecb_should_pass() {
         let key: &[u8] = "YELLOW SUBMARINE".as_bytes();
 
         let file = File::open("res/task7.txt").expect("Failed to open file.");
@@ -92,7 +84,7 @@ mod tests {
             .for_each(|line| file_content.push_str(line.unwrap_or(String::from("")).as_str()));
 
         let cipher = base64_to_bytes(&file_content).expect("Failed to decode base64.");
-        let cleartext = decipher_aes_ecb(cipher.as_ref(), key)
+        let cleartext = decrypt_aes_ecb(cipher.as_ref(), key)
             .iter()
             .map(|&v| v as char)
             .collect::<String>();

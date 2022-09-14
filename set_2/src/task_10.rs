@@ -1,31 +1,26 @@
 // Task: Decipher AES in CBC mode
 use set_1::task_5::repeating_key_xor;
-use set_1::task_7::{aes_decipher_single_block, RepeatingKey, AES_BLOCK_SIZE};
+use set_1::task_7::{aes_decrypt_single_block, RepeatingKey, AES_BLOCK_SIZE};
 
-pub fn decipher_aes_cbc<T: AsRef<[u8]>>(cipher: T, key: T) -> Vec<u8> {
+pub fn decrypt_aes_cbc<T: AsRef<[u8]>>(cipher: T, key: T, iv: T) -> Vec<u8> {
     let cipher_ref = cipher.as_ref();
     let key_ref = key.as_ref();
+    let mut iv = iv.as_ref().iter().copied().collect::<Vec<_>>();
     assert_eq!(cipher_ref.len() % AES_BLOCK_SIZE, 0);
     assert!(key_ref.len() > 0);
     let full_blocks = cipher_ref.len() / AES_BLOCK_SIZE;
     let mut rep_key = RepeatingKey::new(key_ref);
-    let mut iv = vec![0u8; AES_BLOCK_SIZE];
     let mut output = Vec::new();
     for i in 0..full_blocks {
         let block_ref = &cipher_ref[i * AES_BLOCK_SIZE..(i + 1) * AES_BLOCK_SIZE];
         let key_part = rep_key.take(AES_BLOCK_SIZE).unwrap();
-        let res_block = aes_decipher_single_block(block_ref, key_part.as_slice(), None);
+        let res_block = aes_decrypt_single_block(block_ref, key_part.as_slice());
         let res_block = repeating_key_xor(res_block.as_slice(), iv.as_slice());
         output.extend(res_block.into_iter());
         iv = block_ref.iter().copied().collect::<Vec<_>>();
     }
-    let last = *output.last().unwrap();
-    let ending = if last == 0 {
-        AES_BLOCK_SIZE
-    } else {
-        last as usize
-    };
-    output.truncate(output.len() - ending);
+    let last = *output.last().unwrap() as usize;
+    output.truncate(output.len() - last);
     output
 }
 
@@ -37,8 +32,9 @@ mod tests {
     use std::io::{BufRead, BufReader};
 
     #[test]
-    fn decipher_aes_cbc_should_pass() {
+    fn decrypt_aes_cbc_should_pass() {
         let key: &[u8] = "YELLOW SUBMARINE".as_bytes();
+        let iv = vec![0u8; AES_BLOCK_SIZE];
 
         let file = File::open("res/task10.txt").expect("Failed to open file.");
         let mut file_content = String::new();
@@ -47,7 +43,7 @@ mod tests {
             .for_each(|line| file_content.push_str(line.unwrap_or(String::from("")).as_str()));
 
         let cipher = base64_to_bytes(&file_content).expect("Failed to decode base64.");
-        let cleartext = decipher_aes_cbc(cipher.as_ref(), key)
+        let cleartext = decrypt_aes_cbc(cipher.as_ref(), key, iv.as_slice())
             .iter()
             .map(|&v| v as char)
             .collect::<String>();

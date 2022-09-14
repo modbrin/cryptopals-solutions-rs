@@ -24,7 +24,7 @@ mod tests {
     use std::io::{BufRead, BufReader};
 
     #[test]
-    fn decipher_aes_ecb_should_pass() {
+    fn find_aes_ecb_repeats_should_pass() {
         let file = File::open("res/task8.txt").expect("Failed to open file.");
 
         let mut likely_ecb_cipher = String::new();
